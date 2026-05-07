@@ -1,12 +1,25 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, BookOpen, User, LogIn, ShieldAlert } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, BookOpen, User, LogIn, ShieldAlert, Search } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
   const { userData } = useAuth();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -98,6 +111,13 @@ export default function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center gap-4">
+            <button 
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
+              aria-label="Search"
+            >
+              <Search size={20} />
+            </button>
             {userData ? (
               <Link to="/dashboard" className="flex items-center gap-3 group relative bg-white/5 rounded-full pl-2 pr-4 py-1 hover:bg-white/10 transition-colors border border-white/10">
                 {userData.photoURL ? (
@@ -125,9 +145,21 @@ export default function Navbar() {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="-mr-2 flex md:hidden">
+          <div className="-mr-2 flex items-center md:hidden gap-2">
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => {
+                setIsSearchOpen(!isSearchOpen);
+                setIsMobileMenuOpen(false);
+              }}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white focus:outline-none"
+            >
+              <Search size={22} />
+            </button>
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(!isMobileMenuOpen);
+                setIsSearchOpen(false);
+              }}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white focus:outline-none"
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -135,6 +167,25 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Search Bar Dropdown */}
+      {isSearchOpen && (
+        <div className="absolute top-20 left-0 w-full bg-[#1A0338] border-b border-white/10 p-4 animate-in slide-in-from-top-2 shadow-2xl z-40">
+          <form onSubmit={handleSearch} className="max-w-3xl mx-auto flex gap-2">
+            <input 
+              type="text" 
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search courses..."
+              className="flex-1 bg-[#0F0121] border border-white/10 rounded-full px-6 py-3 text-white focus:outline-none focus:border-blue-500"
+            />
+            <button type="submit" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full px-6 py-3 font-bold text-sm tracking-widest text-white shadow-lg shadow-blue-500/20">
+              SEARCH
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (

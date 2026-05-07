@@ -3,7 +3,6 @@ import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { db, storage } from '../lib/firebase';
 import { collection, getDocs, setDoc, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { ArrowLeft, Upload, FileText, Image as ImageIcon, Video, Trash2, Database, Link as LinkIcon, UserCircle } from 'lucide-react';
 import { MOCK_COURSES } from '../data/courses';
 
@@ -245,47 +244,46 @@ export default function Admin() {
     setUploadProgress(0);
 
     try {
-      // 1. Upload to Firebase Storage
-      const storageRef = ref(storage, `courses/${selectedCourse.id}/materials/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(progress);
-        }, 
-        (error) => {
-          console.error("Upload error:", error);
-          let errorMessage = "Failed to upload file.";
-          if (error.code === 'storage/unauthorized') {
-             errorMessage = "Upload denied. Please check Firebase Storage Rules in your Firebase Console. Set them to allow read/write.";
-          } else if (error.code === 'storage/unknown') {
-             errorMessage = "Upload failed. Please ensure Firebase Storage is initialized (Build > Storage > Get Started) and you are on the Blaze plan.";
-          } else {
-             errorMessage = `Upload failed: ${error.message}. Ensure Storage is active and you are on the Blaze plan if required.`;
-          }
-          showMessage(errorMessage, "error");
-          setUploading(false);
-        }, 
-        async () => {
-          // 2. Get Download URL
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          
-          // 3. Save to Firestore
-          await addDoc(collection(db, `courses/${selectedCourse.id}/materials`), {
-            title: materialTitle,
-            type: materialType,
-            url: downloadURL,
-            createdAt: serverTimestamp()
-          });
+      if (!cloudName || !uploadPreset) {
+        showMessage("Cloudinary configuration missing. Please add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET to your environment variables.", "error");
+        setUploading(false);
+        return;
+      }
 
-          showMessage("Material uploaded successfully!", "success");
-          setMaterialTitle('');
-          if (fileInputRef.current) fileInputRef.current.value = '';
-          setUploading(false);
-          fetchMaterials(selectedCourse.id);
-        }
-      );
+      // 1. Upload to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Upload failed');
+      }
+
+      const data = await response.json();
+      const downloadURL = data.secure_url;
+      
+      // 2. Save to Firestore
+      await addDoc(collection(db, `courses/${selectedCourse.id}/materials`), {
+        title: materialTitle,
+        type: materialType,
+        url: downloadURL,
+        createdAt: serverTimestamp()
+      });
+
+      showMessage("Material uploaded successfully!", "success");
+      setMaterialTitle('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setUploading(false);
+      fetchMaterials(selectedCourse.id);
     } catch (error) {
       console.error("Error in upload process:", error);
       showMessage(`Error occurred during upload: ${error instanceof Error ? error.message : ''}`, "error");
@@ -378,10 +376,11 @@ export default function Admin() {
               
               <div className="mb-6 p-4 bg-blue-900/40 border border-blue-500/50 rounded-lg">
                 <p className="text-sm text-blue-200">
-                  <strong className="text-white">Note on Uploads:</strong> To upload files (photos, videos, PDFs), you must first initialize <strong>Firebase Storage</strong> in your Firebase Console. <br/>
-                  1. Go to <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-blue-400 underline">Firebase Console</a>.<br/>
-                  2. Navigate to <strong>Build &gt; Storage</strong> and click <strong>Get Started</strong>.<br/>
-                  3. If prompted to upgrade, choose the <strong>Blaze (pay-as-you-go)</strong> plan. It includes a generous free tier which is enough for most start-up needs!
+                  <strong className="text-white">Note on Uploads:</strong> We use <strong>Cloudinary</strong> for free file uploads (photos, videos, PDFs) to avoid Firebase billing issues.<br/>
+                  1. <a href="https://cloudinary.com/users/register_free" target="_blank" rel="noreferrer" className="text-blue-400 underine">Create a free Cloudinary account</a>.<br/>
+                  2. Go to your Dashboard and get your <strong>Cloud Name</strong>.<br/>
+                  3. Go to Settings &gt; Upload, scroll down to <strong>Upload presets</strong>, and add one. Set the Signing Mode to <strong>Unsigned</strong>.<br/>
+                  4. Add these to Vercel Environment Variables: <code>VITE_CLOUDINARY_CLOUD_NAME</code> and <code>VITE_CLOUDINARY_UPLOAD_PRESET</code>.
                 </p>
               </div>
 
@@ -470,7 +469,7 @@ export default function Admin() {
                     />
                     {!materialTitle && <p className="text-xs text-yellow-500 mt-2">Please enter a title before selecting a file.</p>}
                     <p className="text-xs text-blue-400 mt-4 bg-blue-900/40 p-2 rounded border border-blue-500/20">
-                      <strong>Note:</strong> Direct file uploads require 'Firebase Storage' to be enabled in your Firebase Console. If uploads fail, please use the 'Video/File Link (URL)' option instead.
+                      <strong>Note:</strong> Direct file uploads require Cloudinary environment variables. If you haven't set them up yet, use the 'Video/File Link (URL)' option instead.
                     </p>
                   </div>
                 )}

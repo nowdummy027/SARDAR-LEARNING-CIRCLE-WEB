@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import QRCode from 'react-qr-code';
 import { MOCK_COURSES, CourseCategory } from '../data/courses';
 import { useAuth } from '../lib/AuthContext';
@@ -14,6 +14,8 @@ export default function Courses() {
   const [utrCode, setUtrCode] = useState("");
   const [payingCourse, setPayingCourse] = useState<any>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
   const { user, userData } = useAuth();
 
   useEffect(() => {
@@ -35,9 +37,14 @@ export default function Courses() {
   const uniqueMockCourses = MOCK_COURSES.filter(c => !dbCourseIds.has(c.id));
   const allCourses = [...dbCourses, ...uniqueMockCourses];
 
-  const filteredCourses = activeTab === 'All' 
-    ? allCourses 
-    : allCourses.filter(c => c.category === activeTab);
+  const filteredCourses = allCourses.filter(c => {
+    const matchesTab = activeTab === 'All' || c.category === activeTab;
+    const matchesSearch = !searchQuery || 
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    return matchesTab && matchesSearch;
+  });
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -174,10 +181,25 @@ export default function Courses() {
         
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-6xl font-black text-white tracking-tighter mb-4">OUR <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">COURSES</span></h1>
-          <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+          <p className="text-gray-400 max-w-2xl mx-auto text-lg mb-8">
             Browse our specially curated batches for West Bengal Board students and dive into futuristic AI and Digital skills.
           </p>
         </div>
+
+        {/* Search Header */}
+        {searchQuery && (
+          <div className="flex flex-col items-center justify-center mb-12 animate-in fade-in zoom-in duration-300">
+            <h2 className="text-xl md:text-2xl text-white font-bold mb-4">
+              Showing results for: <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">"{searchQuery}"</span>
+            </h2>
+            <button 
+              onClick={() => navigate('/courses')}
+              className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm font-bold text-gray-300 hover:text-white transition-all uppercase tracking-wider"
+            >
+              Clear Search
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex flex-wrap justify-center gap-3 mb-16">
@@ -197,10 +219,11 @@ export default function Courses() {
         </div>
 
         {/* Course Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredCourses.map(course => (
-            <div key={course.id} className="bg-[#1A0338] rounded-2xl overflow-hidden border border-white/5 flex flex-col group hover:border-white/20 transition-all duration-300 transform hover:-translate-y-2">
-              <div className="relative h-56 overflow-hidden">
+        {filteredCourses.length > 0 ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredCourses.map(course => (
+              <div key={course.id} className="bg-[#1A0338] rounded-2xl overflow-hidden border border-white/5 flex flex-col group hover:border-white/20 transition-all duration-300 transform hover:-translate-y-2">
+                <div className="relative h-56 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1A0338] to-transparent z-10"></div>
                 <img 
                   src={course.thumbnail || course.image || 'https://images.unsplash.com/photo-1546410531-ea4cea9b711c?w=600&auto=format&fit=crop&q=80'} 
@@ -255,8 +278,14 @@ export default function Courses() {
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20 bg-[#1A0338] rounded-2xl border border-white/5 shadow-2xl mx-auto max-w-2xl mt-8">
+            <h3 className="text-2xl font-black text-white tracking-widest mb-4">NO COURSES FOUND</h3>
+            <p className="text-gray-400">We couldn't find any courses matching your search criteria. Please try another search term or click 'Clear Search'.</p>
+          </div>
+        )}
 
       </div>
 
