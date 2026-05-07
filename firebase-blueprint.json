@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing roles and enrolled courses.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string", "description": "Full Name" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "enrolledCourses": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A course containing video lectures and pdfs.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "price", "createdAt"]
+    },
+    "Material": {
+      "title": "Material",
+      "description": "Video or PDF material for a course.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["video", "pdf"] },
+        "url": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["courseId", "title", "type", "url", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles."
+    },
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Stores available courses."
+    },
+    "/courses/{courseId}/materials/{materialId}": {
+      "schema": { "$ref": "#/entities/Material" },
+      "description": "Stores materials like videos and PDFs related to a course."
+    }
+  }
+}

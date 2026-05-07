@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        ('email' in request.auth.token && request.auth.token.email == 'sardarswapan219@gmail.com') ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+      );
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Validation Functions
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['student', 'admin'] &&
+             data.createdAt == request.time;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      // Disallow list to prevent PII exposure
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().role == 'student';
+      allow update: if (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'photoURL', 'enrolledCourses', 'updatedAt'])) || isAdmin();
+    }
+
+    // Courses Collection (Public read, Admin write)
+    match /courses/{courseId} {
+      allow read: if true; 
+      allow write: if isAdmin();
+    }
+
+    // Course Materials Collection (Read if enrolled or admin, Admin write)
+    match /courses/{courseId}/materials/{materialId} {
+      // Allow read if user is enrolled in course OR Admin
+      allow read: if isSignedIn() && (
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('enrolledCourses', []) is list && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('enrolledCourses', []).hasAny([courseId]))
+        || isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+  }
+}
