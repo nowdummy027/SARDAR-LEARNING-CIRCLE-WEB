@@ -13,7 +13,7 @@ export default function Admin() {
 
   const [courses, setCourses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'courses' | 'users'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'users' | 'payments'>('courses');
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   const [isAddingCourse, setIsAddingCourse] = useState(false);
@@ -66,7 +66,7 @@ export default function Admin() {
         const querySnapshot = await getDocs(collection(db, 'courses'));
         const coursesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setCourses(coursesData);
-      } else if (activeTab === 'users') {
+      } else if (activeTab === 'users' || activeTab === 'payments') {
         const querySnapshot = await getDocs(collection(db, 'users'));
         const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsers(usersData);
@@ -205,6 +205,32 @@ export default function Admin() {
     } catch (error) {
       console.error("Error updating enrollments:", error);
       showMessage("Failed to update enrollments", "error");
+    }
+  };
+
+  const handleApprovePayment = async (userId: string, req: any, userDoc: any) => {
+    try {
+      // Add course to enrolledCourses
+      const currentEnrolled = userDoc.enrolledCourses || [];
+      if (!currentEnrolled.includes(req.courseId)) {
+        currentEnrolled.push(req.courseId);
+      }
+      
+      // Update the specific request status to 'approved'
+      const updatedRequests = (userDoc.paymentRequests || []).map((r: any) => 
+        r.utrCode === req.utrCode && r.courseId === req.courseId ? { ...r, status: 'approved' } : r
+      );
+
+      await updateDoc(doc(db, 'users', userId), {
+        enrolledCourses: currentEnrolled,
+        paymentRequests: updatedRequests
+      });
+
+      showMessage(`Payment approved and user enrolled in course!`, "success");
+      fetchData();
+    } catch (error) {
+      console.error("Error approving payment:", error);
+      showMessage("Failed to approve payment", "error");
     }
   };
 
@@ -514,6 +540,12 @@ export default function Admin() {
             >
               Manage Users
             </button>
+            <button
+              onClick={() => setActiveTab('payments')}
+              className={`px-4 py-2 font-bold rounded ${activeTab === 'payments' ? 'bg-blue-600' : 'bg-gray-700'}`}
+            >
+              Payment Requests
+            </button>
           </div>
 
           {activeTab === 'courses' && (
@@ -618,6 +650,48 @@ export default function Admin() {
                   </div>
                 ))}
                 {users.length === 0 && <p>No users found.</p>}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Pending Payment Requests (UPI)</h2>
+              <div className="grid gap-4">
+                {users.flatMap(u => 
+                  (u.paymentRequests || [])
+                    .map((req: any) => ({ ...req, user: u }))
+                )
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((req, idx) => (
+                  <div key={`${req.user.id}-${idx}`} className="p-4 border border-white/20 rounded bg-[#1A0338] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-white">Course: {req.courseTitle}</h3>
+                      <p className="text-sm text-gray-400">User: {req.user.name || 'Unknown'} ({req.user.email || req.user.phone})</p>
+                      <p className="text-sm font-mono text-blue-300 mt-2">UTR/Ref: {req.utrCode}</p>
+                      <p className="text-xs text-gray-500 mt-1">Date: {new Date(req.date).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      {req.status === 'pending' ? (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleApprovePayment(req.user.id, req, req.user)}
+                            className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded text-sm transition-colors"
+                          >
+                            Verify & Approve
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                          Approved
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {users.flatMap(u => u.paymentRequests || []).length === 0 && (
+                  <p className="text-gray-400">No payment requests found.</p>
+                )}
               </div>
             </div>
           )}

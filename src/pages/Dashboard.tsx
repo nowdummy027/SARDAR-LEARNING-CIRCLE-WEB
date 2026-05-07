@@ -38,37 +38,64 @@ export default function Dashboard() {
     }
 
     setUploadingAvatar(true);
+    
     try {
-      const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
+      // 1. Read file as data URL
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        
+        img.onload = async () => {
+          // 2. Resize via Canvas to keep it under 1MB
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
 
-      uploadTask.on('state_changed', 
-        () => {}, 
-        (error) => {
-          console.error("Avatar upload error:", error);
-          if (error.code === 'storage/unauthorized') {
-            alert('Upload denied. Please go to Firebase Console -> Storage -> Rules, and set them to allow read/write.');
-          } else if (error.code === 'storage/unknown') {
-            alert('Upload failed. Note: To upload files, you must first initialize Firebase Storage in your Firebase Console (Build > Storage > Get Started). If prompted, upgrade to the Blaze plan (it has a free tier).');
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
           } else {
-            alert(`Failed to upload avatar. Error: ${error.message}. Ensure Firebase Storage is initialized and you are on the Blaze plan if required.`);
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
           }
-          setUploadingAvatar(false);
-        }, 
-        async () => {
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Convert back to string (JPEG 80% quality)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+          // 3. Save to Firestore (Base64 string)
           try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             await updateDoc(doc(db, 'users', user.uid), {
-              photoURL: downloadURL
+              photoURL: dataUrl
             });
           } catch (e) {
             console.error("Firestore update error:", e);
-            alert("Failed to update profile with new photo.");
+            alert("Failed to update profile with new photo. The image might still be too large.");
           } finally {
             setUploadingAvatar(false);
           }
-        }
-      );
+        };
+      };
+      
+      reader.onerror = (error) => {
+        console.error("File reading error:", error);
+        alert('Failed to read image file.');
+        setUploadingAvatar(false);
+      };
+      
     } catch (error) {
       console.error("Error initiating upload:", error);
       alert('Failed to upload avatar.');

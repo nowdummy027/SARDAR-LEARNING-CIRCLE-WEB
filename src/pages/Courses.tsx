@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import QRCode from 'react-qr-code';
 import { MOCK_COURSES, CourseCategory } from '../data/courses';
 import { useAuth } from '../lib/AuthContext';
 import { db } from '../lib/firebase';
@@ -10,6 +11,7 @@ export default function Courses() {
   const [enrollingMap, setEnrollingMap] = useState<{[key: string]: boolean}>({});
   const [dbCourses, setDbCourses] = useState<any[]>([]);
   const [paymentMethodCourse, setPaymentMethodCourse] = useState<any>(null);
+  const [utrCode, setUtrCode] = useState("");
   const [payingCourse, setPayingCourse] = useState<any>(null);
   const navigate = useNavigate();
   const { user, userData } = useAuth();
@@ -62,61 +64,108 @@ export default function Courses() {
     setPaymentMethodCourse(course);
   };
 
-  const handleEmailNotify = () => {
+  const handleEmailNotify = async () => {
     if (!payingCourse) return;
+    
+    // Save to user documents directly
+    try {
+      if (user?.uid && utrCode) {
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          paymentRequests: arrayUnion({
+            courseId: payingCourse.id,
+            courseTitle: payingCourse.title,
+            utrCode: utrCode,
+            status: 'pending',
+            date: new Date().toISOString()
+          })
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save payment request:", e);
+    }
+    
     const email = "sardarswapan219@gmail.com";
     const subject = encodeURIComponent(`Enrollment Request: ${payingCourse.title}`);
-    const message = encodeURIComponent(`Hello! I have paid ₹${payingCourse.price} for the course "${payingCourse.title}".\nMy email is: ${user?.email || userData?.phone || '...'}\nMy name is: ${userData?.name || '...'}\nPlease approve my enrollment.`);
+    const message = encodeURIComponent(`Hello! I have paid ₹${payingCourse.price} for the course "${payingCourse.title}".\nMy email is: ${user?.email || userData?.phone || '...'}\nMy name is: ${userData?.name || '...'}\nUTR Code: ${utrCode}\n\nPlease approve my enrollment.`);
     window.open(`mailto:${email}?subject=${subject}&body=${message}`, '_blank', 'noopener,noreferrer');
     setPayingCourse(null);
+    setUtrCode("");
   };
 
   const handleRazorpayClick = async (course: any) => {
-
-    const res = await loadRazorpay();
-    if (!res) {
-      alert("Failed to load Razorpay SDK. Please check your connection.");
-      return;
-    }
-
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_dummykey', // Update in .env
-      amount: course.price * 100, // paise
-      currency: "INR",
-      name: "Sardar Learning Circle",
-      description: `Enrollment: ${course.title}`,
-      handler: async function (response: any) {
-        try {
-          setEnrollingMap(prev => ({ ...prev, [course.id]: true }));
-          const userRef = doc(db, 'users', user.uid);
-          await updateDoc(userRef, {
-            enrolledCourses: arrayUnion(course.id),
-            updatedAt: serverTimestamp(),
-          });
-          alert(`Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
-          navigate('/dashboard');
-        } catch (error) {
-          console.error("Enrollment error after payment:", error);
-          alert("Payment received, but course connection delayed. Please contact support.");
-        } finally {
-          setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
-        }
-      },
-      prefill: {
-        name: userData?.name || user.displayName || "",
-        email: user.email || "",
-        contact: userData?.phone || ""
-      },
-      theme: {
-        color: "#2563EB"
+    try {
+      setEnrollingMap(prev => ({ ...prev, [course.id]: true }));
+      
+      const res = await loadRazorpay();
+      if (!res) {
+        alert("Failed to load Razorpay SDK. Please check your connection.");
+        setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
+        return;
       }
-    };
 
-    const paymentObject = new (window as any).Razorpay(options);
-    paymentObject.on('payment.failed', function (response: any) {
-      alert("Payment failed: " + response.error.description);
-    });
-    paymentObject.open();
+      // Call backend to create order
+      const apiResponse = await fetch("/api/create-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: course.price }),
+      });
+      
+      const orderData = await apiResponse.json();
+      
+      if (!apiResponse.ok) {
+        alert(orderData.error || "Failed to initiate payment");
+        setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
+        return;
+      }
+
+      const options = {
+        key: orderData.key_id, 
+        amount: orderData.amount, // amount in paise from backend
+        currency: orderData.currency,
+        order_id: orderData.id,
+        name: "Sardar Learning Circle",
+        description: `Enrollment: ${course.title}`,
+        handler: async function (response: any) {
+          try {
+            // We set it to true again just in case the modal closed
+            setEnrollingMap(prev => ({ ...prev, [course.id]: true }));
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+              enrolledCourses: arrayUnion(course.id),
+              updatedAt: serverTimestamp(),
+            });
+            alert(`Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
+            navigate('/dashboard');
+          } catch (error) {
+            console.error("Enrollment error after payment:", error);
+            alert("Payment received, but course connection delayed. Please contact support.");
+          } finally {
+            setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
+          }
+        },
+        prefill: {
+          name: userData?.name || user.displayName || "",
+          email: user.email || "",
+          contact: userData?.phone || ""
+        },
+        theme: {
+          color: "#2563EB"
+        }
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.on('payment.failed', function (response: any) {
+        alert("Payment failed: " + response.error.description);
+        setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
+      });
+      paymentObject.open();
+
+    } catch (error) {
+      console.error("Razorpay initiation error:", error);
+      alert("Failed to start payment process. Please try again.");
+      setEnrollingMap(prev => ({ ...prev, [course.id]: false }));
+    }
   };
 
   return (
@@ -243,9 +292,6 @@ export default function Courses() {
             >
               Pay via Razorpay API 
             </button>
-            {import.meta.env.VITE_RAZORPAY_KEY_ID?.includes('dummy') && (
-              <p className="text-yellow-500/70 text-[10px] text-center mt-4">API Key in .env is dummy. Razorpay may reject.</p>
-            )}
           </div>
         </div>
       )}
@@ -263,10 +309,11 @@ export default function Courses() {
             <p className="text-gray-400 text-sm text-center mb-6">Course: {payingCourse.title}</p>
             
             <div className="bg-white p-4 rounded-xl max-w-[200px] mx-auto mb-6">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=sardarswapan219@okhdfcbank&pn=SWAPAN%20SARDAR&am=${payingCourse.price}&cu=INR`}
-                alt="UPI QR Code"
-                className="w-full h-auto"
+              <QRCode 
+                value={`upi://pay?pa=sardarswapan219@okhdfcbank&pn=SWAPAN SARDAR&am=${payingCourse.price}&cu=INR`}
+                size={168}
+                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                viewBox={`0 0 168 168`}
               />
             </div>
             
@@ -281,13 +328,32 @@ export default function Courses() {
               <p className="font-mono text-sm text-white select-all mt-1">Name: SWAPAN SARDAR</p>
             </div>
 
+            <div className="mb-6">
+              <label className="block text-xs text-gray-400 uppercase tracking-widest mb-2 text-center">
+                Enter UTR / Reference Number
+              </label>
+              <input
+                type="text"
+                value={utrCode}
+                onChange={(e) => setUtrCode(e.target.value)}
+                placeholder="12-digit UTR No."
+                className="w-full bg-[#0F0121] text-white border border-white/20 rounded-xl px-4 py-3 text-center focus:outline-none focus:border-blue-500 transition-colors"
+                required
+              />
+            </div>
+
             <p className="text-xs text-gray-400 text-center mb-6 leading-relaxed">
-              After successful payment, please click below to send a screenshot via Email. The admin will verify and approve your enrollment shortly.
+              After successful payment, please enter your UTR number and click below to notify the admin. You can optionally attach a screenshot in the email.
             </p>
 
             <button 
               onClick={handleEmailNotify}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all uppercase text-[10px] tracking-widest shadow-lg shadow-blue-500/20"
+              disabled={!utrCode.trim() || utrCode.trim().length < 6}
+              className={`w-full font-bold py-4 rounded-xl transition-all uppercase text-[10px] tracking-widest shadow-lg ${
+                !utrCode.trim() || utrCode.trim().length < 6
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed shadow-none'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
+              }`}
             >
               I HAVE PAID (NOTIFY ADMIN)
             </button>

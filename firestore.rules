@@ -35,7 +35,7 @@ service cloud.firestore {
       // Disallow list to prevent PII exposure
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().role == 'student';
-      allow update: if (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'photoURL', 'enrolledCourses', 'updatedAt'])) || isAdmin();
+      allow update: if (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'photoURL', 'enrolledCourses', 'paymentRequests', 'updatedAt'])) || isAdmin();
     }
 
     // Courses Collection (Public read, Admin write)
