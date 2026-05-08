@@ -13,15 +13,25 @@ export default function Home() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const countSnap = await getCountFromServer(collection(db, 'users'));
-        setActiveUsersCount(countSnap.data().count);
+        let count = 15000; // Fallback
+        try {
+          const countSnap = await getCountFromServer(collection(db, 'users'));
+          count = countSnap.data().count;
+        } catch (e) {
+          console.warn("Could not fetch user count from server, using fallback.", e);
+        }
+        setActiveUsersCount(count);
 
-        const q = query(collection(db, 'users'), limit(30));
-        const snapshot = await getDocs(q);
-        const users = snapshot.docs
-          .map(doc => doc.data())
-          .filter(user => user.photoURL);
-        setActiveUsers(users.slice(0, 3));
+        try {
+          const q = query(collection(db, 'users'), limit(30));
+          const snapshot = await getDocs(q);
+          const users = snapshot.docs
+            .map(doc => doc.data())
+            .filter(user => user.photoURL);
+          setActiveUsers(users.slice(0, 3));
+        } catch (e) {
+           console.warn("Could not fetch active users list from server.", e);
+        }
       } catch (err) {
         console.error("Error fetching users:", err);
       }

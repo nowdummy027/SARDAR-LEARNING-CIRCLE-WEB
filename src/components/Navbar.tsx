@@ -26,7 +26,10 @@ export default function Navbar() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      alert("To install the app, look for the 'Add to Home Screen' or 'Install' option in your browser menu. If you are viewing this in a preview window, try opening it in a new browser tab first.");
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -134,16 +137,14 @@ export default function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center gap-4">
-            {deferredPrompt && (
-              <button
-                onClick={handleInstallClick}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-sm font-bold text-white shadow-lg shadow-green-500/20 hover:from-green-400 hover:to-emerald-500 transition-colors"
-                title="Install App"
-              >
-                <Download size={16} />
-                <span>INSTALL APP</span>
-              </button>
-            )}
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-sm font-bold text-white shadow-lg shadow-green-500/20 hover:from-green-400 hover:to-emerald-500 transition-colors"
+              title="Install App"
+            >
+              <Download size={16} />
+              <span>INSTALL APP</span>
+            </button>
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
@@ -262,18 +263,16 @@ export default function Navbar() {
               </Link>
             )}
 
-            {deferredPrompt && (
-              <button
-                onClick={() => {
-                  handleInstallClick();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="mt-2 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 rounded-full text-sm font-bold shadow-lg shadow-green-500/20 uppercase tracking-widest hover:from-green-400 hover:to-emerald-500 transition-colors"
-              >
-                <Download size={18} />
-                INSTALL APP
-              </button>
-            )}
+            <button
+              onClick={() => {
+                handleInstallClick();
+                setIsMobileMenuOpen(false);
+              }}
+              className="mt-2 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 rounded-full text-sm font-bold shadow-lg shadow-green-500/20 uppercase tracking-widest hover:from-green-400 hover:to-emerald-500 transition-colors"
+            >
+              <Download size={18} />
+              INSTALL APP
+            </button>
           </div>
         </div>
       )}
