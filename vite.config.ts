@@ -22,17 +22,18 @@ export default defineConfig(({mode}) => {
           theme_color: '#0F0121',
           background_color: '#0F0121',
           display: 'standalone',
+          start_url: '/',
           icons: [
             {
-              src: '/icon.svg',
+              src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
               sizes: '192x192',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             },
             {
-              src: '/icon.svg',
+              src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             }
           ]

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, BookOpen, User, LogIn, ShieldAlert, Search, Download, Share, Smartphone, PlusSquare, MoreVertical } from 'lucide-react';
+import { Menu, X, BookOpen, User, LogIn, ShieldAlert, Search, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 
@@ -8,7 +8,6 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallModal, setShowInstallModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { userData } = useAuth();
@@ -27,14 +26,16 @@ export default function Navbar() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      setShowInstallModal(true);
-      return;
-    }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setDeferredPrompt(null);
+        }
+      } catch (error) {
+        console.error("Install prompt failed", error);
+      }
     }
   };
 
@@ -278,59 +279,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* Manual Install Modal */}
-      {showInstallModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 relative">
-          <div className="bg-[#1A0338] border border-blue-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative shadow-blue-900/50">
-            <button 
-              onClick={() => setShowInstallModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-            >
-              <X size={24} />
-            </button>
-            
-            <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                <Smartphone size={32} className="text-white" />
-              </div>
-            </div>
-            
-            <h3 className="text-xl font-bold text-white text-center mb-2">Install App Directly</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
-              Depending on your device, follow these quick steps to install the app:
-            </p>
-            
-            <div className="space-y-4">
-              <div className="bg-[#0F0121] p-4 rounded-xl border border-white/5">
-                <h4 className="text-blue-400 font-bold mb-2 flex items-center gap-2 text-sm">
-                  <span className="bg-blue-500/20 p-1 rounded">iOS/iPhone</span>
-                </h4>
-                <ol className="text-sm text-gray-300 space-y-2">
-                  <li className="flex gap-2"><Share size={16} className="shrink-0 text-gray-400" /> Tap the <strong>Share</strong> button at bottom.</li>
-                  <li className="flex gap-2"><PlusSquare size={16} className="shrink-0 text-gray-400" /> Select <strong>Add to Home Screen</strong>.</li>
-                </ol>
-              </div>
-              
-              <div className="bg-[#0F0121] p-4 rounded-xl border border-white/5">
-                <h4 className="text-emerald-400 font-bold mb-2 flex items-center gap-2 text-sm">
-                  <span className="bg-emerald-500/20 p-1 rounded">Android/Chrome</span>
-                </h4>
-                <ol className="text-sm text-gray-300 space-y-2">
-                  <li className="flex gap-2"><MoreVertical size={16} className="shrink-0 text-gray-400" /> Tap the <strong>Menu (3 dots)</strong>.</li>
-                  <li className="flex gap-2"><Download size={16} className="shrink-0 text-gray-400" /> Select <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
-                </ol>
-              </div>
-            </div>
-            
-            <button 
-              onClick={() => setShowInstallModal(false)}
-              className="mt-6 w-full px-4 py-3 bg-white/10 hover:bg-white/20 rounded-full text-white font-medium transition-colors text-sm"
-            >
-              Okay, I understand
-            </button>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }
