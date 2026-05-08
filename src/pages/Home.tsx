@@ -1,9 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlayCircle, FileText, MessageCircle, MonitorPlay, ArrowRight } from 'lucide-react';
 import { MOCK_COURSES } from '../data/courses';
+import { collection, getDocs, query, limit, getCountFromServer } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function Home() {
   const featuredCourses = MOCK_COURSES.slice(0, 3); // Just show top 3 for home
+  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const countSnap = await getCountFromServer(collection(db, 'users'));
+        setActiveUsersCount(countSnap.data().count);
+
+        const q = query(collection(db, 'users'), limit(30));
+        const snapshot = await getDocs(q);
+        const users = snapshot.docs
+          .map(doc => doc.data())
+          .filter(user => user.photoURL);
+        setActiveUsers(users.slice(0, 3));
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -28,10 +52,22 @@ export default function Home() {
               </Link>
               <div className="flex gap-4 items-center">
                 <div className="flex -space-x-3">
-                  <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-gray-600 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
-                  <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-blue-500 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
-                  <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-purple-500 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
-                  <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-gray-400 flex items-center justify-center text-[10px] font-bold text-gray-900">15k+</div>
+                  {activeUsers.length > 0 ? (
+                    activeUsers.map((user, idx) => (
+                      <div key={idx} className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-gray-600 flex items-center justify-center overflow-hidden">
+                        <img src={user.photoURL} alt={user.name || "Student"} className="object-cover w-full h-full" />
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-gray-600 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
+                      <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-blue-500 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
+                      <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-purple-500 flex items-center justify-center overflow-hidden"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=100&auto=format&fit=crop" alt="" className="object-cover w-full h-full" /></div>
+                    </>
+                  )}
+                  <div className="w-10 h-10 rounded-full border-2 border-[#0F0121] bg-gray-400 flex items-center justify-center text-[10px] font-bold text-gray-900">
+                    {activeUsersCount > 1000 ? `${(activeUsersCount / 1000).toFixed(1)}k+` : `${activeUsersCount}+`}
+                  </div>
                 </div>
                 <div className="text-xs text-gray-400 font-medium">
                   <span className="text-white block font-bold text-sm">Active Students</span>

@@ -258,7 +258,12 @@ export default function Admin() {
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+      let resourceType = 'auto';
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        resourceType = 'raw';
+      }
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
         method: 'POST',
         body: formData
       });

@@ -130,11 +130,17 @@ export default function Login() {
           uid: user.uid,
           name: user.displayName || 'Student',
           email: user.email || '',
+          photoURL: user.photoURL || '',
           role: 'student',
           enrolledCourses: [],
           phone: user.phoneNumber || '',
           createdAt: serverTimestamp()
         });
+      } else {
+        // Optionally update photoURL if it exists now but didn't before
+        if (user.photoURL && !docSnap.data().photoURL) {
+          await setDoc(userDocRef, { photoURL: user.photoURL }, { merge: true });
+        }
       }
       
       navigate('/dashboard');
