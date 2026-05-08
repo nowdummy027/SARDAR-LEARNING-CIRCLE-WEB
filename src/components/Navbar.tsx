@@ -36,6 +36,8 @@ export default function Navbar() {
       } catch (error) {
         console.error("Install prompt failed", error);
       }
+    } else {
+      alert("Direct install is only supported on certain browsers (like Chrome for Android). \n\nIf you are on iPhone/iPad: Tap the Share icon, then select 'Add to Home Screen'.\n\nNote: If you are in the preview window, please open the website in a new tab first.");
     }
   };
 
