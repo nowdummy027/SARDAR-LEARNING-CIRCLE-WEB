@@ -26,10 +26,7 @@ export default function Navbar() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      alert("To install the app, look for the 'Add to Home Screen' or 'Install' option in your browser menu. If you are viewing this in a preview window, try opening it in a new browser tab first.");
-      return;
-    }
+    if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
