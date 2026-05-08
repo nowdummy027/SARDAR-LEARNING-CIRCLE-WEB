@@ -16,24 +16,24 @@ export default defineConfig(({mode}) => {
           enabled: true
         },
         manifest: {
-          name: 'Learning Platform',
-          short_name: 'Learning',
-          description: 'Learning Platform for Active Students',
+          name: 'Sardar Learning Circle',
+          short_name: 'Sardar Learning',
+          description: 'Sardar Learning Circle Web Application',
           theme_color: '#0F0121',
           background_color: '#0F0121',
           display: 'standalone',
           start_url: '/',
           icons: [
             {
-              src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              src: '/icon.svg',
               sizes: '192x192',
-              type: 'image/png',
+              type: 'image/svg+xml',
               purpose: 'any maskable'
             },
             {
-              src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              src: '/icon.svg',
               sizes: '512x512',
-              type: 'image/png',
+              type: 'image/svg+xml',
               purpose: 'any maskable'
             }
           ]
