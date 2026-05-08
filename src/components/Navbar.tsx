@@ -300,9 +300,15 @@ export default function Navbar() {
             </div>
             
             <h3 className="text-xl font-bold text-white text-center mb-2">Install App Directly</h3>
-            <p className="text-gray-400 text-sm text-center mb-6">
+            <p className="text-gray-400 text-sm text-center mb-4">
               Depending on your device, follow these quick steps to install the app:
             </p>
+
+            <div className="bg-yellow-500/10 p-3 rounded-xl border border-yellow-500/20 mb-4">
+              <p className="text-yellow-200 text-xs text-center">
+                <strong>Note:</strong> Installations may be blocked inside preview windows. For best results, open this website in a new, full browser tab first.
+              </p>
+            </div>
             
             <div className="space-y-4">
               <div className="bg-[#0F0121] p-4 rounded-xl border border-white/5">
