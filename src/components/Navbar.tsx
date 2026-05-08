@@ -1,15 +1,38 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, BookOpen, User, LogIn, ShieldAlert, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Menu, X, BookOpen, User, LogIn, ShieldAlert, Search, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { userData } = useAuth();
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +134,16 @@ export default function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center gap-4">
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallClick}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-sm font-bold text-white shadow-lg shadow-green-500/20 hover:from-green-400 hover:to-emerald-500 transition-colors"
+                title="Install App"
+              >
+                <Download size={16} />
+                <span>INSTALL APP</span>
+              </button>
+            )}
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/5 transition-colors"
@@ -227,6 +260,19 @@ export default function Navbar() {
                 >
                 LOGIN / JOIN FOR FREE
               </Link>
+            )}
+
+            {deferredPrompt && (
+              <button
+                onClick={() => {
+                  handleInstallClick();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="mt-2 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3 rounded-full text-sm font-bold shadow-lg shadow-green-500/20 uppercase tracking-widest hover:from-green-400 hover:to-emerald-500 transition-colors"
+              >
+                <Download size={18} />
+                INSTALL APP
+              </button>
             )}
           </div>
         </div>

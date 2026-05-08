@@ -12,6 +12,9 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        devOptions: {
+          enabled: true
+        },
         manifest: {
           name: 'Learning Platform',
           short_name: 'Learning',
@@ -20,6 +23,11 @@ export default defineConfig(({mode}) => {
           background_color: '#0F0121',
           display: 'standalone',
           icons: [
+            {
+              src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
             {
               src: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
               sizes: '512x512',
