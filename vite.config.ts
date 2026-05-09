@@ -25,13 +25,13 @@ export default defineConfig(({mode}) => {
           start_url: '/',
           icons: [
             {
-              src: '/icon.svg',
+              src: '/icon.svg?v=3',
               sizes: '192x192',
               type: 'image/svg+xml',
               purpose: 'any maskable'
             },
             {
-              src: '/icon.svg',
+              src: '/icon.svg?v=3',
               sizes: '512x512',
               type: 'image/svg+xml',
               purpose: 'any maskable'
