@@ -101,10 +101,17 @@ export default function Navbar() {
                    <div className="absolute w-[200%] h-8 bg-gradient-to-r from-transparent via-white/30 to-transparent -rotate-45 translate-y-12 group-hover:-translate-y-12 transition-transform duration-700 blur-[2px]"></div>
                    
                    {/* Book Icon */}
-                   <svg className="w-6 h-6 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] z-20 group-hover:text-cyan-200 transition-colors duration-300" 
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                   </svg>
+                    <svg className="w-[26px] h-[26px] z-20 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" 
+                         viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
+                      {/* Left cover - Neon Cyan */}
+                      <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292V6.042z" fill="#06b6d4" stroke="#22d3ee" strokeLinecap="round" strokeLinejoin="round" />
+                      
+                      {/* Right cover - Neon Purple */}
+                      <path d="M12 6.042a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292V6.042z" fill="#9333ea" stroke="#a855f7" strokeLinecap="round" strokeLinejoin="round" />
+                      
+                      {/* Center binding line */}
+                      <path d="M12 6.042v14.25" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                    
                    {/* Floating digital particles */}
                    <div className="absolute top-1 right-2 w-1 h-1 bg-cyan-400 rounded-full animate-ping"></div>
